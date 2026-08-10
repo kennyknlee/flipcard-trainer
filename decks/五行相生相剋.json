@@ -1,0 +1,56 @@
+{
+  "deckName": "五行相生相剋",
+  "description": "五行相生相剋關係溫習題",
+  "cards": [
+    {
+      "question": "木生？",
+      "answer": "火",
+      "note": "木生火：木燃燒可生火"
+    },
+    {
+      "question": "火生？",
+      "answer": "土",
+      "note": "火燒後成灰，灰歸於土"
+    },
+    {
+      "question": "土生？",
+      "answer": "金",
+      "note": "金屬礦藏出於土中"
+    },
+    {
+      "question": "金生？",
+      "answer": "水",
+      "note": "傳統記法：金可生水"
+    },
+    {
+      "question": "水生？",
+      "answer": "木",
+      "note": "水滋養樹木生長"
+    },
+    {
+      "question": "木剋？",
+      "answer": "土",
+      "note": "木根入土，可疏土、制土"
+    },
+    {
+      "question": "土剋？",
+      "answer": "水",
+      "note": "土可阻擋、吸收水"
+    },
+    {
+      "question": "水剋？",
+      "answer": "火",
+      "note": "水能滅火"
+    },
+    {
+      "question": "火剋？",
+      "answer": "金",
+      "note": "火可熔金"
+    },
+    {
+      "question": "金剋？",
+      "answer": "木",
+      "note": "金屬工具可砍木"
+    }
+  ]
+}
