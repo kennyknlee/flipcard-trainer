@@ -265,6 +265,18 @@
     .cards-table th, .cards-table td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
     .cards-table th { color: var(--muted); font-size: 13px; }
 
+    .primary-mode {
+      background: #fef3c7 !important;
+      border-color: #f59e0b !important;
+      color: #92400e !important;
+      font-weight: 900;
+    }
+
+    .reverse-hint {
+      color: var(--brand-2);
+      font-weight: 800;
+    }
+
     .size-label {
       align-self: center;
       color: var(--muted);
@@ -318,6 +330,7 @@
         <button class="secondary" id="resetBtn">全部蓋牌</button>
         <button class="secondary" id="studyWrongBtn">只溫唔識</button>
         <button class="secondary" id="showAllBtn">顯示全部</button>
+        <button class="secondary" id="reviewModeBtn">正向溫習</button>
         <button class="secondary" id="cardSmallerBtn">卡牌－</button>
         <button class="secondary" id="cardLargerBtn">卡牌＋</button>
         <span class="size-label" id="cardSizeLabel">卡牌：大</span>
@@ -451,6 +464,7 @@
         selectedDeckId: DEFAULT_DECKS[0].id,
         filter: 'all',
         cardSize: 'large',
+        reviewMode: 'forward',
         decks: DEFAULT_DECKS.map(normalizeDeck)
       };
     }
@@ -465,6 +479,7 @@
           selectedDeckId: parsed.selectedDeckId || decks[0].id,
           filter: parsed.filter || 'all',
           cardSize: ['compact', 'normal', 'large', 'xl'].includes(parsed.cardSize) ? parsed.cardSize : 'large',
+          reviewMode: ['forward', 'reverse'].includes(parsed.reviewMode) ? parsed.reviewMode : 'forward',
           decks
         };
       } catch (error) {
@@ -546,6 +561,44 @@
       `;
     }
 
+    function getDisplayContent(card, stage) {
+      const reverse = state.reviewMode === 'reverse';
+      const first = reverse ? card.answer : card.question;
+      const second = reverse ? card.question : card.answer;
+      if (stage === 'question') {
+        return {
+          label: reverse ? '反向題目' : '題目',
+          primary: first,
+          note: reverse ? '再點一下睇原本題目' : '再點一下睇答案'
+        };
+      }
+      return {
+        label: reverse ? '原本題目' : '答案',
+        primary: second,
+        note: reverse ? `原本答案：${card.answer}` : card.question
+      };
+    }
+
+    function resetVisibleCards() {
+      Object.keys(cardStates).forEach((id) => { cardStates[id] = 'covered'; });
+    }
+
+    function toggleReviewMode() {
+      state.reviewMode = state.reviewMode === 'reverse' ? 'forward' : 'reverse';
+      resetVisibleCards();
+      render();
+      toast(state.reviewMode === 'reverse' ? '已切換：反向溫習' : '已切換：正向溫習');
+    }
+
+    function applyReviewMode() {
+      const btn = document.getElementById('reviewModeBtn');
+      if (!btn) return;
+      const reverse = state.reviewMode === 'reverse';
+      btn.textContent = reverse ? '反向溫習' : '正向溫習';
+      btn.title = reverse ? '現在：答案 → 題目，點擊切換正向' : '現在：題目 → 答案，點擊切換反向';
+      btn.classList.toggle('primary-mode', reverse);
+    }
+
     function renderCards(deck) {
       const cards = visibleCards(deck);
       const grid = document.getElementById('cardGrid');
@@ -555,13 +608,14 @@
       }
       grid.innerHTML = cards.map((card, index) => {
         const stage = cardStates[card.id] || 'covered';
+        const display = getDisplayContent(card, stage === 'answer' ? 'answer' : 'question');
         const frontContent = stage === 'answer'
-          ? `<div class="stage-pill">答案</div><div class="card-answer">${escapeHtml(card.answer)}</div><div class="card-note">${escapeHtml(card.question)}${card.note ? '｜' + escapeHtml(card.note) : ''}</div><div class="mark-panel"><button class="small good" data-mark="correct" data-card-id="${card.id}">✅ 識</button><button class="small bad" data-mark="wrong" data-card-id="${card.id}">❌ 唔識</button><button class="small review" data-mark="review" data-card-id="${card.id}">🔁 再溫</button></div>`
-          : `<div class="stage-pill">題目</div><div class="card-title">${escapeHtml(card.question)}</div><div class="card-note">再點一下睇答案</div>`;
+          ? `<div class="stage-pill">${escapeHtml(display.label)}</div><div class="card-answer">${escapeHtml(display.primary)}</div><div class="card-note reverse-hint">${escapeHtml(display.note)}</div>${card.note ? `<div class="card-note">${escapeHtml(card.note)}</div>` : ''}<div class="mark-panel"><button class="small good" data-mark="correct" data-card-id="${card.id}">✅ 識</button><button class="small bad" data-mark="wrong" data-card-id="${card.id}">❌ 唔識</button><button class="small review" data-mark="review" data-card-id="${card.id}">🔁 再溫</button></div>`
+          : `<div class="stage-pill">${escapeHtml(display.label)}</div><div class="card-title">${escapeHtml(display.primary)}</div><div class="card-note">${escapeHtml(display.note)}</div>`;
         return `
           <article class="flip-card" tabindex="0" role="button" aria-label="卡牌 ${index + 1}" data-card-id="${card.id}" data-state="${stage}">
             <div class="card-inner">
-              <div class="face back"><div class="suit">♠︎♥︎</div><div class="label">CARD ${index + 1}</div><div class="hint">點一下出題</div></div>
+              <div class="face back"><div class="suit">♠︎♥︎</div><div class="label">CARD ${index + 1}</div><div class="hint">${state.reviewMode === 'reverse' ? '反向：答案 → 題目' : '正向：題目 → 答案'}</div></div>
               <div class="face front">${frontContent}<div class="card-progress">seen ${card.stats?.seen || 0} · ✅ ${card.stats?.correct || 0} · ❌ ${card.stats?.wrong || 0}</div></div>
             </div>
           </article>
@@ -599,6 +653,7 @@
 
     function render() {
       applyCardSize();
+      applyReviewMode();
       const deck = getCurrentDeck();
       renderDeckSelect();
       renderStats(deck);
@@ -757,6 +812,7 @@
       });
       document.getElementById('studyWrongBtn').addEventListener('click', () => { state.filter = 'wrong'; render(); });
       document.getElementById('showAllBtn').addEventListener('click', () => { state.filter = 'all'; render(); });
+      document.getElementById('reviewModeBtn').addEventListener('click', toggleReviewMode);
       document.getElementById('cardSmallerBtn').addEventListener('click', () => changeCardSize(-1));
       document.getElementById('cardLargerBtn').addEventListener('click', () => changeCardSize(1));
       document.getElementById('toggleEditorBtn').addEventListener('click', () => document.getElementById('editorPanel').classList.toggle('hidden'));
@@ -794,7 +850,7 @@
     render();
 
     // Expose tiny test surface for local smoke tests.
-    window.FlipCardTrainer = { DEFAULT_DECKS, normalizeDeck, cycleCardState, defaultState, CARD_SIZE_ORDER };
+    window.FlipCardTrainer = { DEFAULT_DECKS, normalizeDeck, cycleCardState, defaultState, CARD_SIZE_ORDER, getDisplayContent };
   </script>
 </body>
 </html>
