@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>啤牌記憶訓練器 | FlipCard Trainer</title>
+  <style>
+    :root {
+      --bg: #f6f3ee;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --brand: #7c3aed;
+      --brand-2: #f59e0b;
+      --good: #059669;
+      --bad: #dc2626;
+      --review: #2563eb;
+      --shadow: 0 12px 32px rgba(31, 41, 55, .12);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(124, 58, 237, .13), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(245, 158, 11, .16), transparent 36%),
+        var(--bg);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 22px 18px 8px;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    .hero {
+      background: rgba(255,255,255,.78);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,.75);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    h1 { margin: 0; font-size: clamp(25px, 4vw, 42px); letter-spacing: -.04em; }
+    .subtitle { margin: 6px 0 0; color: var(--muted); line-height: 1.5; }
+
+    .toolbar, .subtoolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    select, input, textarea, button {
+      font: inherit;
+    }
+
+    select, input, textarea {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 10px 12px;
+      outline: none;
+      min-height: 42px;
+    }
+
+    select { min-width: min(100%, 270px); }
+    textarea { width: 100%; min-height: 160px; resize: vertical; }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 13px;
+      min-height: 42px;
+      cursor: pointer;
+      background: #111827;
+      color: white;
+      box-shadow: 0 7px 18px rgba(17,24,39,.16);
+      transition: transform .15s ease, opacity .15s ease, box-shadow .15s ease;
+      touch-action: manipulation;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(17,24,39,.18); }
+    button:active { transform: translateY(0); opacity: .88; }
+    button.secondary { background: #fff; color: var(--ink); border: 1px solid var(--line); box-shadow: none; }
+    button.brand { background: var(--brand); }
+    button.warn { background: var(--brand-2); color: #111827; }
+    button.good { background: var(--good); }
+    button.bad { background: var(--bad); }
+    button.review { background: var(--review); }
+    button.danger { background: #991b1b; }
+    button.small { padding: 7px 10px; min-height: 34px; font-size: 14px; }
+
+    main {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 12px 18px 46px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+    .stat {
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(255,255,255,.8);
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 6px 18px rgba(31, 41, 55, .07);
+    }
+    .stat strong { display: block; font-size: 22px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .flip-card {
+      min-height: 188px;
+      perspective: 1000px;
+      outline: none;
+    }
+
+    .card-inner {
+      position: relative;
+      height: 100%;
+      min-height: 188px;
+      border-radius: var(--radius);
+      background: transparent;
+      transform-style: preserve-3d;
+      transition: transform .45s cubic-bezier(.2,.8,.2,1);
+    }
+
+    .flip-card[data-state="question"] .card-inner,
+    .flip-card[data-state="answer"] .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.8);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 14px;
+    }
+
+    .back {
+      color: white;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.16), transparent 30%),
+        repeating-linear-gradient(45deg, rgba(255,255,255,.12) 0 8px, transparent 8px 16px),
+        linear-gradient(145deg, #4c1d95, #7c3aed 52%, #f59e0b);
+    }
+    .back .suit { font-size: 38px; line-height: 1; }
+    .back .label { margin-top: 8px; font-weight: 800; letter-spacing: .08em; }
+    .back .hint { margin-top: 4px; opacity: .82; font-size: 13px; }
+
+    .front {
+      transform: rotateY(180deg);
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .stage-pill {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 12px;
+      color: #fff;
+      background: var(--brand);
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+    .flip-card[data-state="answer"] .stage-pill { background: var(--good); }
+
+    .card-title { font-size: clamp(28px, 5vw, 46px); font-weight: 900; line-height: 1.05; }
+    .card-answer { font-size: clamp(20px, 4vw, 32px); font-weight: 900; color: var(--brand); line-height: 1.2; }
+    .card-note { margin-top: 10px; color: var(--muted); line-height: 1.35; font-size: 14px; }
+    .card-progress { position: absolute; bottom: 10px; color: var(--muted); font-size: 12px; }
+
+    .mark-panel {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .panel {
+      margin-top: 18px;
+      background: rgba(255,255,255,.9);
+      border: 1px solid rgba(255,255,255,.8);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 10px 24px rgba(31,41,55,.08);
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-row { display: grid; gap: 6px; margin-bottom: 10px; }
+    label { font-weight: 700; font-size: 14px; }
+    .muted { color: var(--muted); }
+    .hidden { display: none !important; }
+
+    .cards-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .cards-table th, .cards-table td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+    .cards-table th { color: var(--muted); font-size: 13px; }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      background: #111827;
+      color: white;
+      padding: 10px 14px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+      z-index: 10;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+    @media (max-width: 760px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-2 { grid-template-columns: 1fr; }
+      .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .flip-card, .card-inner { min-height: 166px; }
+      header, main { padding-left: 12px; padding-right: 12px; }
+      .toolbar button, .subtoolbar button { flex: 1 1 auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <section class="hero">
+      <div>
+        <h1>🃏 啤牌記憶訓練器</h1>
+        <p class="subtitle">蓋牌 → 點一下出題 → 再點一下出答案。可用於時辰、英文、保險、投資、任何一問一答資料。</p>
+      </div>
+      <div class="toolbar">
+        <select id="deckSelect" aria-label="選擇牌組"></select>
+        <button class="brand" id="shuffleBtn">洗牌</button>
+        <button class="secondary" id="resetBtn">全部蓋牌</button>
+        <button class="secondary" id="studyWrongBtn">只溫唔識</button>
+        <button class="secondary" id="showAllBtn">顯示全部</button>
+      </div>
+      <div class="subtoolbar">
+        <button class="warn" id="toggleEditorBtn">牌組管理</button>
+        <button class="secondary" id="exportBtn">匯出 JSON</button>
+        <button class="secondary" id="importBtn">匯入 JSON</button>
+        <input class="hidden" id="fileInput" type="file" accept="application/json,.json" />
+      </div>
+    </section>
+  </header>
+
+  <main>
+    <section class="stats" id="stats"></section>
+    <section class="card-grid" id="cardGrid" aria-live="polite"></section>
+
+    <section class="panel hidden" id="editorPanel">
+      <h2>牌組管理</h2>
+      <div class="grid-2">
+        <div>
+          <div class="form-row">
+            <label for="deckNameInput">牌組名稱</label>
+            <input id="deckNameInput" placeholder="例如：IELTS 中級字" />
+          </div>
+          <div class="form-row">
+            <label for="deckDescInput">描述</label>
+            <input id="deckDescInput" placeholder="這副牌想訓練甚麼？" />
+          </div>
+          <button class="brand" id="saveDeckBtn">儲存牌組名稱</button>
+          <button class="danger" id="deleteDeckBtn">刪除目前牌組</button>
+        </div>
+        <div>
+          <div class="form-row">
+            <label for="questionInput">題目</label>
+            <input id="questionInput" placeholder="例如：子時" />
+          </div>
+          <div class="form-row">
+            <label for="answerInput">答案</label>
+            <input id="answerInput" placeholder="例如：23:00 - 01:00" />
+          </div>
+          <div class="form-row">
+            <label for="noteInput">補充（可選）</label>
+            <input id="noteInput" placeholder="例如：夜半，老鼠活動時間" />
+          </div>
+          <button class="brand" id="addCardBtn">新增卡牌</button>
+          <button class="secondary" id="newDeckBtn">建立新牌組</button>
+        </div>
+      </div>
+      <p class="muted">提示：匯入 JSON 格式：<code>{"deckName":"...","cards":[{"question":"...","answer":"...","note":"..."}]}</code></p>
+      <table class="cards-table">
+        <thead><tr><th>題目</th><th>答案</th><th>操作</th></tr></thead>
+        <tbody id="cardsTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // FlipCard Trainer MVP - Vanilla JS only
+    const STORAGE_KEY = 'flipcard-trainer-v1';
+
+    const DEFAULT_DECKS = [
+      {
+        id: 'earthly-branches-hours',
+        deckName: '地支十二時辰',
+        description: '十二地支對應傳統十二時辰',
+        cards: [
+          { id: 'zi', question: '子時', answer: '23:00 - 01:00', note: '夜半，老鼠活動時間' },
+          { id: 'chou', question: '丑時', answer: '01:00 - 03:00', note: '雞鳴前後' },
+          { id: 'yin', question: '寅時', answer: '03:00 - 05:00', note: '平旦，天將亮' },
+          { id: 'mao', question: '卯時', answer: '05:00 - 07:00', note: '日出前後' },
+          { id: 'chen', question: '辰時', answer: '07:00 - 09:00', note: '食時，早飯時間' },
+          { id: 'si', question: '巳時', answer: '09:00 - 11:00', note: '隅中，接近中午' },
+          { id: 'wu', question: '午時', answer: '11:00 - 13:00', note: '日中，太陽最高' },
+          { id: 'wei', question: '未時', answer: '13:00 - 15:00', note: '日昳，午後' },
+          { id: 'shen', question: '申時', answer: '15:00 - 17:00', note: '晡時，下午後段' },
+          { id: 'you', question: '酉時', answer: '17:00 - 19:00', note: '日入，黃昏' },
+          { id: 'xu', question: '戌時', answer: '19:00 - 21:00', note: '黃昏後，入夜' },
+          { id: 'hai', question: '亥時', answer: '21:00 - 23:00', note: '人定，準備休息' }
+        ]
+      }
+    ];
+
+    function uid(prefix = 'id') {
+      return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    function normalizeDeck(deck) {
+      return {
+        id: deck.id || uid('deck'),
+        deckName: deck.deckName || deck.name || '未命名牌組',
+        description: deck.description || '',
+        cards: (deck.cards || []).map((card) => ({
+          id: card.id || uid('card'),
+          question: String(card.question || '').trim(),
+          answer: String(card.answer || '').trim(),
+          note: String(card.note || '').trim(),
+          stats: {
+            seen: Number(card.stats?.seen || 0),
+            correct: Number(card.stats?.correct || 0),
+            wrong: Number(card.stats?.wrong || 0),
+            review: Number(card.stats?.review || 0)
+          }
+        })).filter((card) => card.question && card.answer)
+      };
+    }
+
+    function defaultState() {
+      return {
+        selectedDeckId: DEFAULT_DECKS[0].id,
+        filter: 'all',
+        decks: DEFAULT_DECKS.map(normalizeDeck)
+      };
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return defaultState();
+        const parsed = JSON.parse(raw);
+        const decks = Array.isArray(parsed.decks) && parsed.decks.length ? parsed.decks.map(normalizeDeck) : DEFAULT_DECKS.map(normalizeDeck);
+        return {
+          selectedDeckId: parsed.selectedDeckId || decks[0].id,
+          filter: parsed.filter || 'all',
+          decks
+        };
+      } catch (error) {
+        console.warn('Failed to load state, resetting', error);
+        return defaultState();
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function getCurrentDeck() {
+      return state.decks.find((deck) => deck.id === state.selectedDeckId) || state.decks[0];
+    }
+
+    function cycleCardState(current) {
+      if (current === 'covered') return 'question';
+      if (current === 'question') return 'answer';
+      return 'covered';
+    }
+
+    function shuffleArray(items) {
+      const arr = [...items];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function toast(message) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toast.timer);
+      toast.timer = setTimeout(() => el.classList.remove('show'), 1700);
+    }
+
+    let state = loadState();
+    let cardStates = {};
+    let cardOrder = [];
+
+    function resetCardRuntime(deck = getCurrentDeck()) {
+      cardStates = Object.fromEntries(deck.cards.map((card) => [card.id, 'covered']));
+      cardOrder = deck.cards.map((card) => card.id);
+    }
+
+    function visibleCards(deck) {
+      const cards = cardOrder.map((id) => deck.cards.find((card) => card.id === id)).filter(Boolean);
+      if (state.filter === 'wrong') {
+        return cards.filter((card) => (card.stats?.wrong || 0) > (card.stats?.correct || 0) || (card.stats?.review || 0) > 0);
+      }
+      return cards;
+    }
+
+    function renderDeckSelect() {
+      const select = document.getElementById('deckSelect');
+      select.innerHTML = state.decks.map((deck) => `<option value="${deck.id}">${escapeHtml(deck.deckName)} (${deck.cards.length})</option>`).join('');
+      select.value = getCurrentDeck().id;
+    }
+
+    function renderStats(deck) {
+      const totals = deck.cards.reduce((acc, card) => {
+        acc.seen += card.stats?.seen || 0;
+        acc.correct += card.stats?.correct || 0;
+        acc.wrong += card.stats?.wrong || 0;
+        acc.review += card.stats?.review || 0;
+        return acc;
+      }, { seen: 0, correct: 0, wrong: 0, review: 0 });
+      document.getElementById('stats').innerHTML = `
+        <div class="stat"><strong>${deck.cards.length}</strong><span>卡牌數量</span></div>
+        <div class="stat"><strong>${totals.seen}</strong><span>已翻看次數</span></div>
+        <div class="stat"><strong>${totals.correct}</strong><span>標記「識」</span></div>
+        <div class="stat"><strong>${totals.wrong + totals.review}</strong><span>唔識 / 再溫</span></div>
+      `;
+    }
+
+    function renderCards(deck) {
+      const cards = visibleCards(deck);
+      const grid = document.getElementById('cardGrid');
+      if (!cards.length) {
+        grid.innerHTML = `<div class="panel"><strong>暫時沒有需要重溫的卡。</strong><p class="muted">可以按「顯示全部」返回完整牌組。</p></div>`;
+        return;
+      }
+      grid.innerHTML = cards.map((card, index) => {
+        const stage = cardStates[card.id] || 'covered';
+        const frontContent = stage === 'answer'
+          ? `<div class="stage-pill">答案</div><div class="card-answer">${escapeHtml(card.answer)}</div><div class="card-note">${escapeHtml(card.question)}${card.note ? '｜' + escapeHtml(card.note) : ''}</div><div class="mark-panel"><button class="small good" data-mark="correct" data-card-id="${card.id}">✅ 識</button><button class="small bad" data-mark="wrong" data-card-id="${card.id}">❌ 唔識</button><button class="small review" data-mark="review" data-card-id="${card.id}">🔁 再溫</button></div>`
+          : `<div class="stage-pill">題目</div><div class="card-title">${escapeHtml(card.question)}</div><div class="card-note">再點一下睇答案</div>`;
+        return `
+          <article class="flip-card" tabindex="0" role="button" aria-label="卡牌 ${index + 1}" data-card-id="${card.id}" data-state="${stage}">
+            <div class="card-inner">
+              <div class="face back"><div class="suit">♠︎♥︎</div><div class="label">CARD ${index + 1}</div><div class="hint">點一下出題</div></div>
+              <div class="face front">${frontContent}<div class="card-progress">seen ${card.stats?.seen || 0} · ✅ ${card.stats?.correct || 0} · ❌ ${card.stats?.wrong || 0}</div></div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderEditor(deck) {
+      document.getElementById('deckNameInput').value = deck.deckName;
+      document.getElementById('deckDescInput').value = deck.description || '';
+      document.getElementById('cardsTableBody').innerHTML = deck.cards.map((card) => `
+        <tr>
+          <td>${escapeHtml(card.question)}${card.note ? `<br><span class="muted">${escapeHtml(card.note)}</span>` : ''}</td>
+          <td>${escapeHtml(card.answer)}</td>
+          <td>
+            <button class="small secondary" data-edit-id="${card.id}">編輯</button>
+            <button class="small danger" data-delete-id="${card.id}">刪除</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function render() {
+      const deck = getCurrentDeck();
+      renderDeckSelect();
+      renderStats(deck);
+      renderCards(deck);
+      renderEditor(deck);
+      saveState();
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>'"]/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;'
+      }[char]));
+    }
+
+    function onCardActivate(cardId) {
+      const deck = getCurrentDeck();
+      const card = deck.cards.find((item) => item.id === cardId);
+      if (!card) return;
+      const nextState = cycleCardState(cardStates[cardId] || 'covered');
+      cardStates[cardId] = nextState;
+      if (nextState === 'question') card.stats.seen += 1;
+      render();
+    }
+
+    function markCard(cardId, type) {
+      const deck = getCurrentDeck();
+      const card = deck.cards.find((item) => item.id === cardId);
+      if (!card) return;
+      if (type === 'correct') card.stats.correct += 1;
+      if (type === 'wrong') card.stats.wrong += 1;
+      if (type === 'review') card.stats.review += 1;
+      cardStates[cardId] = 'covered';
+      toast(type === 'correct' ? '已標記：識 ✅' : type === 'wrong' ? '已標記：唔識 ❌' : '已標記：再溫 🔁');
+      render();
+    }
+
+    function addCard() {
+      const question = document.getElementById('questionInput').value.trim();
+      const answer = document.getElementById('answerInput').value.trim();
+      const note = document.getElementById('noteInput').value.trim();
+      if (!question || !answer) return toast('請輸入題目同答案');
+      const deck = getCurrentDeck();
+      const card = normalizeDeck({ cards: [{ question, answer, note }] }).cards[0];
+      deck.cards.push(card);
+      cardStates[card.id] = 'covered';
+      cardOrder.push(card.id);
+      document.getElementById('questionInput').value = '';
+      document.getElementById('answerInput').value = '';
+      document.getElementById('noteInput').value = '';
+      toast('已新增卡牌');
+      render();
+    }
+
+    function editCard(cardId) {
+      const deck = getCurrentDeck();
+      const card = deck.cards.find((item) => item.id === cardId);
+      if (!card) return;
+      const question = prompt('修改題目', card.question);
+      if (question === null) return;
+      const answer = prompt('修改答案', card.answer);
+      if (answer === null) return;
+      const note = prompt('修改補充', card.note || '');
+      card.question = question.trim() || card.question;
+      card.answer = answer.trim() || card.answer;
+      card.note = (note || '').trim();
+      render();
+    }
+
+    function deleteCard(cardId) {
+      if (!confirm('確定刪除此卡牌？')) return;
+      const deck = getCurrentDeck();
+      deck.cards = deck.cards.filter((item) => item.id !== cardId);
+      delete cardStates[cardId];
+      cardOrder = cardOrder.filter((id) => id !== cardId);
+      render();
+    }
+
+    function newDeck() {
+      const name = prompt('新牌組名稱', '新學習牌組');
+      if (!name) return;
+      const deck = normalizeDeck({ id: uid('deck'), deckName: name, description: '', cards: [] });
+      state.decks.push(deck);
+      state.selectedDeckId = deck.id;
+      state.filter = 'all';
+      resetCardRuntime(deck);
+      render();
+      toast('已建立新牌組');
+    }
+
+    function saveDeckMeta() {
+      const deck = getCurrentDeck();
+      deck.deckName = document.getElementById('deckNameInput').value.trim() || deck.deckName;
+      deck.description = document.getElementById('deckDescInput').value.trim();
+      render();
+      toast('已儲存牌組');
+    }
+
+    function deleteDeck() {
+      if (state.decks.length <= 1) return toast('至少要保留一個牌組');
+      if (!confirm('確定刪除目前牌組？')) return;
+      state.decks = state.decks.filter((deck) => deck.id !== state.selectedDeckId);
+      state.selectedDeckId = state.decks[0].id;
+      state.filter = 'all';
+      resetCardRuntime(getCurrentDeck());
+      render();
+    }
+
+    function exportDeck() {
+      const deck = getCurrentDeck();
+      const payload = JSON.stringify(deck, null, 2);
+      const blob = new Blob([payload], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${deck.deckName.replace(/[^\w\u4e00-\u9fff-]+/g, '_')}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importDeckFromFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          const decks = Array.isArray(parsed) ? parsed : [parsed];
+          const normalized = decks.map(normalizeDeck).filter((deck) => deck.cards.length);
+          if (!normalized.length) throw new Error('No valid cards');
+          normalized.forEach((deck) => { deck.id = uid('deck'); state.decks.push(deck); });
+          state.selectedDeckId = normalized[0].id;
+          state.filter = 'all';
+          resetCardRuntime(getCurrentDeck());
+          render();
+          toast(`已匯入 ${normalized.length} 個牌組`);
+        } catch (error) {
+          console.error(error);
+          toast('匯入失敗：JSON 格式不正確');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function attachEvents() {
+      document.getElementById('deckSelect').addEventListener('change', (event) => {
+        state.selectedDeckId = event.target.value;
+        state.filter = 'all';
+        resetCardRuntime(getCurrentDeck());
+        render();
+      });
+      document.getElementById('shuffleBtn').addEventListener('click', () => {
+        cardOrder = shuffleArray(cardOrder);
+        render();
+      });
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        resetCardRuntime(getCurrentDeck());
+        render();
+      });
+      document.getElementById('studyWrongBtn').addEventListener('click', () => { state.filter = 'wrong'; render(); });
+      document.getElementById('showAllBtn').addEventListener('click', () => { state.filter = 'all'; render(); });
+      document.getElementById('toggleEditorBtn').addEventListener('click', () => document.getElementById('editorPanel').classList.toggle('hidden'));
+      document.getElementById('saveDeckBtn').addEventListener('click', saveDeckMeta);
+      document.getElementById('deleteDeckBtn').addEventListener('click', deleteDeck);
+      document.getElementById('addCardBtn').addEventListener('click', addCard);
+      document.getElementById('newDeckBtn').addEventListener('click', newDeck);
+      document.getElementById('exportBtn').addEventListener('click', exportDeck);
+      document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+      document.getElementById('fileInput').addEventListener('change', (event) => {
+        if (event.target.files?.[0]) importDeckFromFile(event.target.files[0]);
+        event.target.value = '';
+      });
+      document.getElementById('cardGrid').addEventListener('click', (event) => {
+        const mark = event.target.closest('[data-mark]');
+        if (mark) { event.stopPropagation(); return markCard(mark.dataset.cardId, mark.dataset.mark); }
+        const card = event.target.closest('.flip-card');
+        if (card) onCardActivate(card.dataset.cardId);
+      });
+      document.getElementById('cardGrid').addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const card = event.target.closest('.flip-card');
+        if (card) { event.preventDefault(); onCardActivate(card.dataset.cardId); }
+      });
+      document.getElementById('cardsTableBody').addEventListener('click', (event) => {
+        const edit = event.target.closest('[data-edit-id]');
+        const del = event.target.closest('[data-delete-id]');
+        if (edit) editCard(edit.dataset.editId);
+        if (del) deleteCard(del.dataset.deleteId);
+      });
+    }
+
+    resetCardRuntime(getCurrentDeck());
+    attachEvents();
+    render();
+
+    // Expose tiny test surface for local smoke tests.
+    window.FlipCardTrainer = { DEFAULT_DECKS, normalizeDeck, cycleCardState, defaultState };
+  </script>
+</body>
+</html>
