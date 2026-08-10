@@ -18,6 +18,40 @@
       --review: #2563eb;
       --shadow: 0 12px 32px rgba(31, 41, 55, .12);
       --radius: 18px;
+      --card-min: 210px;
+      --card-height: 260px;
+      --mobile-card-height: 250px;
+      --card-title-size: 40px;
+      --card-answer-size: 42px;
+    }
+
+    body[data-card-size="compact"] {
+      --card-min: 150px;
+      --card-height: 190px;
+      --mobile-card-height: 190px;
+      --card-title-size: 30px;
+      --card-answer-size: 32px;
+    }
+    body[data-card-size="normal"] {
+      --card-min: 180px;
+      --card-height: 220px;
+      --mobile-card-height: 220px;
+      --card-title-size: 35px;
+      --card-answer-size: 36px;
+    }
+    body[data-card-size="large"] {
+      --card-min: 210px;
+      --card-height: 260px;
+      --mobile-card-height: 250px;
+      --card-title-size: 40px;
+      --card-answer-size: 42px;
+    }
+    body[data-card-size="xl"] {
+      --card-min: 250px;
+      --card-height: 310px;
+      --mobile-card-height: 300px;
+      --card-title-size: 46px;
+      --card-answer-size: 50px;
     }
 
     * { box-sizing: border-box; }
@@ -124,13 +158,13 @@
 
     .card-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-min), 1fr));
       gap: 14px;
       margin-top: 14px;
     }
 
     .flip-card {
-      min-height: 188px;
+      min-height: var(--card-height);
       perspective: 1000px;
       outline: none;
     }
@@ -138,7 +172,7 @@
     .card-inner {
       position: relative;
       height: 100%;
-      min-height: 188px;
+      min-height: var(--card-height);
       border-radius: var(--radius);
       background: transparent;
       transform-style: preserve-3d;
@@ -163,7 +197,8 @@
       justify-content: center;
       align-items: center;
       text-align: center;
-      padding: 14px;
+      padding: 16px;
+      gap: 8px;
     }
 
     .back {
@@ -181,6 +216,9 @@
       transform: rotateY(180deg);
       background: #fff;
       color: var(--ink);
+      justify-content: flex-start;
+      padding-top: 42px;
+      padding-bottom: 14px;
     }
 
     .stage-pill {
@@ -195,15 +233,15 @@
     }
     .flip-card[data-state="answer"] .stage-pill { background: var(--good); }
 
-    .card-title { font-size: clamp(28px, 5vw, 46px); font-weight: 900; line-height: 1.05; }
-    .card-answer { font-size: clamp(20px, 4vw, 32px); font-weight: 900; color: var(--brand); line-height: 1.2; }
-    .card-note { margin-top: 10px; color: var(--muted); line-height: 1.35; font-size: 14px; }
-    .card-progress { position: absolute; bottom: 10px; color: var(--muted); font-size: 12px; }
+    .card-title { font-size: var(--card-title-size); font-weight: 900; line-height: 1.05; }
+    .card-answer { font-size: var(--card-answer-size); font-weight: 900; color: var(--brand); line-height: 1.05; word-break: break-word; }
+    .card-note { margin-top: 6px; color: var(--muted); line-height: 1.35; font-size: 14px; }
+    .card-progress { margin-top: auto; color: var(--muted); font-size: 12px; }
 
     .mark-panel {
       display: flex;
       gap: 6px;
-      margin-top: 12px;
+      margin-top: 8px;
       flex-wrap: wrap;
       justify-content: center;
     }
@@ -227,6 +265,14 @@
     .cards-table th, .cards-table td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
     .cards-table th { color: var(--muted); font-size: 13px; }
 
+    .size-label {
+      align-self: center;
+      color: var(--muted);
+      font-size: 14px;
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+
     .toast {
       position: fixed;
       left: 50%;
@@ -248,7 +294,12 @@
       .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid-2 { grid-template-columns: 1fr; }
       .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      .flip-card, .card-inner { min-height: 166px; }
+      .flip-card, .card-inner { min-height: var(--mobile-card-height); }
+      .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .front { padding-top: 38px; }
+      .mark-panel button { font-size: 13px; padding: 7px 8px; }
+      .card-note { font-size: 13px; }
+      .card-progress { font-size: 11px; }
       header, main { padding-left: 12px; padding-right: 12px; }
       .toolbar button, .subtoolbar button { flex: 1 1 auto; }
     }
@@ -267,6 +318,9 @@
         <button class="secondary" id="resetBtn">全部蓋牌</button>
         <button class="secondary" id="studyWrongBtn">只溫唔識</button>
         <button class="secondary" id="showAllBtn">顯示全部</button>
+        <button class="secondary" id="cardSmallerBtn">卡牌－</button>
+        <button class="secondary" id="cardLargerBtn">卡牌＋</button>
+        <span class="size-label" id="cardSizeLabel">卡牌：大</span>
       </div>
       <div class="subtoolbar">
         <button class="warn" id="toggleEditorBtn">牌組管理</button>
@@ -377,6 +431,7 @@
       return {
         selectedDeckId: DEFAULT_DECKS[0].id,
         filter: 'all',
+        cardSize: 'large',
         decks: DEFAULT_DECKS.map(normalizeDeck)
       };
     }
@@ -390,6 +445,7 @@
         return {
           selectedDeckId: parsed.selectedDeckId || decks[0].id,
           filter: parsed.filter || 'all',
+          cardSize: ['compact', 'normal', 'large', 'xl'].includes(parsed.cardSize) ? parsed.cardSize : 'large',
           decks
         };
       } catch (error) {
@@ -401,6 +457,9 @@
     function saveState() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
+
+    const CARD_SIZE_ORDER = ['compact', 'normal', 'large', 'xl'];
+    const CARD_SIZE_LABELS = { compact: '細', normal: '中', large: '大', xl: '特大' };
 
     function getCurrentDeck() {
       return state.decks.find((deck) => deck.id === state.selectedDeckId) || state.decks[0];
@@ -506,7 +565,21 @@
       `).join('');
     }
 
+    function applyCardSize() {
+      document.body.dataset.cardSize = state.cardSize || 'large';
+      const label = document.getElementById('cardSizeLabel');
+      if (label) label.textContent = `卡牌：${CARD_SIZE_LABELS[state.cardSize] || '大'}`;
+    }
+
+    function changeCardSize(delta) {
+      const current = CARD_SIZE_ORDER.indexOf(state.cardSize || 'large');
+      const next = Math.max(0, Math.min(CARD_SIZE_ORDER.length - 1, current + delta));
+      state.cardSize = CARD_SIZE_ORDER[next];
+      render();
+    }
+
     function render() {
+      applyCardSize();
       const deck = getCurrentDeck();
       renderDeckSelect();
       renderStats(deck);
@@ -665,6 +738,8 @@
       });
       document.getElementById('studyWrongBtn').addEventListener('click', () => { state.filter = 'wrong'; render(); });
       document.getElementById('showAllBtn').addEventListener('click', () => { state.filter = 'all'; render(); });
+      document.getElementById('cardSmallerBtn').addEventListener('click', () => changeCardSize(-1));
+      document.getElementById('cardLargerBtn').addEventListener('click', () => changeCardSize(1));
       document.getElementById('toggleEditorBtn').addEventListener('click', () => document.getElementById('editorPanel').classList.toggle('hidden'));
       document.getElementById('saveDeckBtn').addEventListener('click', saveDeckMeta);
       document.getElementById('deleteDeckBtn').addEventListener('click', deleteDeck);
@@ -700,7 +775,7 @@
     render();
 
     // Expose tiny test surface for local smoke tests.
-    window.FlipCardTrainer = { DEFAULT_DECKS, normalizeDeck, cycleCardState, defaultState };
+    window.FlipCardTrainer = { DEFAULT_DECKS, normalizeDeck, cycleCardState, defaultState, CARD_SIZE_ORDER };
   </script>
 </body>
 </html>
