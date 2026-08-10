@@ -469,14 +469,23 @@
       };
     }
 
+    function mergeDefaultDecks(savedDecks) {
+      const decks = Array.isArray(savedDecks) && savedDecks.length ? savedDecks.map(normalizeDeck) : [];
+      const existingIds = new Set(decks.map((deck) => deck.id));
+      DEFAULT_DECKS.map(normalizeDeck).forEach((deck) => {
+        if (!existingIds.has(deck.id)) decks.push(deck);
+      });
+      return decks.length ? decks : DEFAULT_DECKS.map(normalizeDeck);
+    }
+
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return defaultState();
         const parsed = JSON.parse(raw);
-        const decks = Array.isArray(parsed.decks) && parsed.decks.length ? parsed.decks.map(normalizeDeck) : DEFAULT_DECKS.map(normalizeDeck);
+        const decks = mergeDefaultDecks(parsed.decks);
         return {
-          selectedDeckId: parsed.selectedDeckId || decks[0].id,
+          selectedDeckId: decks.some((deck) => deck.id === parsed.selectedDeckId) ? parsed.selectedDeckId : decks[0].id,
           filter: parsed.filter || 'all',
           cardSize: ['compact', 'normal', 'large', 'xl'].includes(parsed.cardSize) ? parsed.cardSize : 'large',
           reviewMode: ['forward', 'reverse'].includes(parsed.reviewMode) ? parsed.reviewMode : 'forward',
@@ -850,7 +859,7 @@
     render();
 
     // Expose tiny test surface for local smoke tests.
-    window.FlipCardTrainer = { DEFAULT_DECKS, normalizeDeck, cycleCardState, defaultState, CARD_SIZE_ORDER, getDisplayContent };
+    window.FlipCardTrainer = { DEFAULT_DECKS, normalizeDeck, mergeDefaultDecks, cycleCardState, defaultState, CARD_SIZE_ORDER, getDisplayContent };
   </script>
 </body>
 </html>
